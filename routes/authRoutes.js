@@ -36,6 +36,7 @@ authRouter.get('/getUser', checkNotAuthenticated, async (req, res) => {
             };
 
             res.status(200).json({
+                id: user._id,
                 name: user.name,
                 email: user.email,
                 createdAt: user.createdAt
@@ -66,7 +67,7 @@ authRouter.post('/register', checkAuthenticated, async (req, res) => {
     }
 
     if(errors.length > 0) {
-        res.status(401).json({ errors })
+        res.status(401).json({message: errors, status: 'error'})
 
     } else {
 
