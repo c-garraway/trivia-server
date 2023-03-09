@@ -116,6 +116,9 @@ app.use(helmet());
 const authRouter = require('./routes/authRoutes');
 app.use('/auth', authRouter);
 
+const teamRouter = require('./routes/teamRoutes');
+app.use('/team', teamRouter);
+
 app.get('/', (req, res) =>{
     res.send('bem backend root')    
 })
