@@ -2,123 +2,187 @@ const express = require('express');
 const passport = require('passport');
 const { checkAuthenticated, checkNotAuthenticated } = require('../utilities/utility')
 const Team = require('../config/teams')
-
+const User = require('../config/users')
 const teamRouter = express.Router();
 
-teamRouter.get('/getTeam/:id', checkNotAuthenticated, async (req, res) => {
-    const id = String(req.params.id);
-    //TODO: Change to get team by userID!
-    if(id) {
+teamRouter.get('/', checkNotAuthenticated, async (req, res) => {
+    const searchEmail = req.query.email;
+    const searchTeamName = req.query.name;
+
+    if(searchEmail) {
         try {
-            const team = await Team.findOne({ 
-                _id: id,
+            const user = await User.findOne({ 
+                email: searchEmail,
             });
 
-            if (team.length === 0) {
-                return res.status(200).json({message: 'Team Info Not Found', status: 'error'});
+            if (user === null) {
+                throw new Error("User Info Not Found")
             };
 
-            res.status(200).json({team});
+            res.status(200).json({email: user.email});
     
         } catch (error) {
             console.log(error.message)
+            res.status(404).json(error.message)
         } 
-    } else {
-        res.status(404).json({message: 'Team id missing', status: 'error'});}
+    };
+
+    if(searchTeamName) {
+        try {
+            const team = await Team.findOne({ 
+                name: {'$regex': searchTeamName, "$options": "i" },
+            });
+
+            if (team === null) {
+                throw new Error("Team Info Not Found")
+            };
+
+            console.log(team)
+
+            res.status(200).json({name: team.name});
+    
+        } catch (error) {
+            console.log(error)
+            res.status(404).json(error.message)
+        } 
+    };
 });
 
-
-/* members: {
-    lead: String,
-    partner: String,
-}, */
 teamRouter.post('/addTeam', checkNotAuthenticated, async (req, res) => {
-    const { name, lead, partner } = req.body;
-
-    let errors = [];
-
-    if(!name ) {
-        errors.push('Team name required! ');
-    };
-
-    if(!lead && !partner) {
-        errors.push('Team role required! ');
-    };
-    //TODO: check if user already belongs to a team!
-    if(errors.length > 0) {
-        res.status(401).json({message: errors, status: 'error'})
-
-    } else {
-
-        try {
-            const teamCheck = await Team.findOne({ 
-                name: name,
-            });
-
-            if(teamCheck) {
-                return res.status(401).json({message: 'Team Already Exists', status: 'error'});
-            } else {
-
-                const team = await Team.create({ 
-                    name: name,
-                    members: {
-                        lead: lead,
-                        partner: partner
-                    },
-                });
+    const name = req.query.teamName;
+    const lead = req.query.userEmail;
     
-                res.status(200).json({team});
-            }
+    try {
+        //Input validation block
+        if(!name ) {
+            throw new Error('Team name required! ');
+        };
     
-        } catch (error) {
-            console.log(error.message)
-        }  
-    }
+        if(!lead) {
+            throw new Error('User email required! ');
+        };
+
+        //Check if user already belongs to another team
+        const userCheck = await Team.findOne({ 
+            $or: [
+                {'members.lead': lead},
+                {'members.partner': lead}
+            ],
+        });
+        console.log(userCheck)
+        if(userCheck) {
+            throw new Error("User already belongs to another team");
+        } 
+
+        //Check if team exists
+        const teamCheck = await Team.findOne({ 
+            name: {'$regex': name, "$options": "i" },
+        });
+        console.log(teamCheck) 
+        if(teamCheck) {
+            throw new Error("Team already exists");
+        } 
+
+        //Database update block
+        const team = await Team.create({ 
+            name: name,
+            members: {
+                lead: lead,
+                partner: ''
+            },
+        });
+
+        res.status(200).json({team});
+
+    } catch (error) {
+        console.log(error.message)
+        res.status(400).json(error.message)
+    }  
 });
 
-teamRouter.put('/updateTeam/:id', checkNotAuthenticated, async (req, res) => {
-    const id = String(req.params.id);
-    const { name, lead, partner } = req.body;
+teamRouter.put('/updateTeam', checkNotAuthenticated, async (req, res) => {
+    const user = req.query.userEmail;
+    const lead = req.query.teamLeadEmail;
 
-    let errors = [];
-
-    if(!name ) {
-        errors.push('Team name required! ');
-    };
-
-    if(!lead && !partner) {
-        errors.push('Team role required! ');
-    };
-
-    if(errors.length > 0) {
-        res.status(401).json({message: errors, status: 'error'})
-
-    } else {
-
-        try {
-            const teamCheck = await Team.findOne({ 
-                _id: id,
-            });
-
-            if(!teamCheck) {
-                return res.status(401).json({message: 'Does not Exists', status: 'error'});
-            } else {
-
-                const updateResponse = await Team.updateOne({ 
-                    name: name,
-                    members: {
-                        lead: lead,
-                        partner: partner
-                    },
-                }).where('_id').equals(id);
+    console.log(user, lead)
     
-                res.status(200).json({updateResponse});
-            }
+    try {
+        //Input validation block
+        if(!user ) {
+            throw new Error('User email required! ');
+        };
     
-        } catch (error) {
-            console.log(error.message)
-        }  
-    }
+        if(!lead) {
+            throw new Error('Team lead email required! ');
+        };
+
+        //Check if user already belongs to another team
+        const userCheck = await Team.findOne({ 
+            $or: [
+                {'members.lead': user},
+                {'members.partner': user}
+            ],
+        });
+        console.log('userCheck: ' + userCheck)
+        if(userCheck) {
+            throw new Error("User already belongs to another team");
+        } 
+
+        //Check if user already belongs to another team
+        const leader = await Team.find({ 
+            'members.lead': lead
+        });
+        console.log('leader: ' + leader)
+        if(leader.length > 1) {
+            throw new Error("Partner already belongs to another team");
+        } 
+
+        //Get partners teamID
+        const teamID = leader[0]._id
+        console.log('teamID: ' + teamID) 
+        if(!teamID) {
+            throw new Error("Cannot fetch teamID");
+        } 
+
+        //Database update block
+        const team = await Team.findByIdAndUpdate(
+            teamID,
+            { $set: { 'members.partner': user } },
+            { new: true }
+        );
+        console.log('team: ' + team) 
+
+        res.status(200).json({team});
+
+    } catch (error) {
+        console.log(error.message)
+        res.status(400).json(error.message)
+    }  
 });
 
+teamRouter.get('/getTeam', checkNotAuthenticated, async (req, res) => {
+    const user = req.session.passport.user;
+    const email = user?.email
+
+    try {
+        const team = await Team.findOne({ 
+            $or: [
+                {'members.lead': email},
+                {'members.partner': email}
+            ]
+        });
+
+        if (team === null) {
+            throw new Error("Team Info Not Found")
+        };
+
+        console.log(team)
+
+        res.status(200).json(team);
+        
+    } catch (error) {
+        console.log(error.message)
+        res.status(400).json({error: error.message})
+    }
+});
 module.exports = teamRouter;
