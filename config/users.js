@@ -14,6 +14,10 @@ const userSchema = new mongoose.Schema({
         minLength: 6,
         required: true,
     },
+    userType: {
+        type: String,
+        lowercase: true
+    },
     createdAt: {
         type: Date,
         immutable: true,

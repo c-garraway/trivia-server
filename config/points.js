@@ -1,22 +1,22 @@
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({
-    name: String,
-    email: {
-        type: String,
-        required: true,
-        lowercase: true,
-    },
-    password: {
-        type: String,
-        minLength: 6,
-        required: true,
-    },
-    createdAt: {
-        type: Date,
-        immutable: true,
-        default: () => Date.now(),
-    },
+const pointsSchema = new mongoose.Schema({
+    teamName: String,
+    teamRank: Number,
+    teamPointsTotal: Number,
+    teamPointsBlock: Array,
+    teamMembers: {
+        lead: {
+            email: String,
+            leadPointsBlock: Array,
+            dailyPoints: {}
+        },
+        partner: {
+            email: String,
+            partnerPointsBlock: Array,
+            dailyPoints: {}
+        },
+    }
 });
 
-module.exports = mongoose.model('User', userSchema)
+module.exports = mongoose.model('Points', pointsSchema)

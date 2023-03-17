@@ -119,6 +119,9 @@ app.use('/auth', authRouter);
 const teamRouter = require('./routes/teamRoutes');
 app.use('/team', teamRouter);
 
+const pointsRouter = require('./routes/pointsRoutes');
+app.use('/points', pointsRouter);
+
 app.get('/', (req, res) =>{
     res.send('bem backend root')    
 })

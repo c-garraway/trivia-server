@@ -49,8 +49,9 @@ teamRouter.get('/', checkNotAuthenticated, async (req, res) => {
 });
 
 teamRouter.post('/addTeam', checkNotAuthenticated, async (req, res) => {
+    const user = req.session.passport.user;
     const name = req.query.teamName;
-    const lead = req.query.userEmail;
+    const lead = user?.email
     
     try {
         //Input validation block
@@ -88,10 +89,16 @@ teamRouter.post('/addTeam', checkNotAuthenticated, async (req, res) => {
             name: name,
             members: {
                 lead: lead,
-                partner: ''
             },
         });
 
+        await User.findOneAndUpdate(
+            {email: lead}, {$set: {userType: 'lead'}}
+        );
+        //Update session user
+        req.session.passport.user = await User.findOne({
+            email: lead
+        })
         res.status(200).json({team});
 
     } catch (error) {
@@ -101,7 +108,8 @@ teamRouter.post('/addTeam', checkNotAuthenticated, async (req, res) => {
 });
 
 teamRouter.put('/updateTeam', checkNotAuthenticated, async (req, res) => {
-    const user = req.query.userEmail;
+    const sessionUser = req.session.passport.user;
+    const user = sessionUser?.email;
     const lead = req.query.teamLeadEmail;
 
     console.log(user, lead)
@@ -152,6 +160,14 @@ teamRouter.put('/updateTeam', checkNotAuthenticated, async (req, res) => {
         );
         console.log('team: ' + team) 
 
+        await User.findOneAndUpdate( //TODO: Rethink userType change!!!!
+            {email: user}, {userType: 'partner'}
+        ); 
+        //Update session user
+        req.session.passport.user = await User.findOne({
+            email: user
+        })
+
         res.status(200).json({team});
 
     } catch (error) {
@@ -177,7 +193,7 @@ teamRouter.get('/getTeam', checkNotAuthenticated, async (req, res) => {
         };
 
         console.log(team)
-
+        req.session.team = team
         res.status(200).json(team);
         
     } catch (error) {
