@@ -5,6 +5,7 @@ const Team = require('../config/teams')
 const User = require('../config/users')
 const Points = require('../config/points')
 const pointsRouter = express.Router();
+const { updateTeamRanks, sortTeams } = require('../utilities/helper')
 
 pointsRouter.get('/', checkNotAuthenticated, async (req, res) => {
     const searchTeamName = req.session.team.name;
@@ -33,7 +34,8 @@ pointsRouter.get('/', checkNotAuthenticated, async (req, res) => {
 pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) => {
     const user = req.session.passport.user;
     const userEmail = user?.email
-    const userType = 'partner' //user?.userType;
+    const userID = user?._id
+    const userType = user?.userType;
     const teamName = req.session.team.name;
     const category = req.body.category;
     const difficulty = req.body.difficulty;
@@ -43,7 +45,8 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
     
     try {
         //Input validation block
-        if(!userEmail || !userType) {
+
+        if(!userEmail || !userType || !userID) {
             throw new Error('User cookie not sent in header! ');
         };
 
@@ -70,15 +73,47 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
 
 
         //TODO: Check for team point document if not found create entry
-        const teamPointsCheck = await Points.findOne({ 
+        let teamPointsCheck = await Points.findOne({ 
             teamName: {'$regex': teamName, "$options": "i" },
         });
         //console.log(teamPointsCheck) 
         if(!teamPointsCheck) {
-            throw new Error("Team points record does not exists"); //future remove
+            let leadUserEmail;
+            let partnerUserEmail;
+            if(userType === 'lead') {
+                leadUserEmail = userEmail
+            } else {
+                leadUserEmail = null
+            }
+            if(userType === 'partner') {
+                partnerUserEmail = userEmail
+            } else {
+                partnerUserEmail = null
+            }
             // Create new record.
+            await Points.create({
+                teamName: teamName,
+                teamRank: null,
+                teamPointsTotal: null,
+                teamMembers: {
+                    lead: {
+                        email: leadUserEmail,
+                        pointsBlockTotal: 0,
+                        pointsBlock: [],
+                        dailyPoints: {}
+                    },
+                    partner: {
+                        email: partnerUserEmail,
+                        pointsBlockTotal: 0,
+                        pointsBlock: [],
+                        dailyPoints: {}
+                    }
+                }
+            })
+            teamPointsCheck = await Points.findOne({ 
+                teamName: {'$regex': teamName, "$options": "i" },
+            });
         }
-
         //Check if daily update already exists
         const dailyPointsCheck = await Points.findOne({
             $and: [
@@ -86,7 +121,7 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
                 {[`teamMembers.${userType}.dailyPoints.${currentDate}`]: {$exists: true}}
             ]
         })
-        //console.log(dailyPointsCheck)
+        console.log(dailyPointsCheck)
         if(dailyPointsCheck) {
             throw new Error("Daily entry already exists"); //future remove
         }
@@ -106,68 +141,60 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
             { new: true }
         );
 
-        res.status(200).json(teamPoints);
+        //Perform calculations
+        //Points block update with daily total
+        console.log('TPC: ' + teamPointsCheck)
+        const leadPointsBlockArray =  teamPointsCheck.teamMembers.lead.pointsBlock
+        const partnerPointsBlockArray = teamPointsCheck.teamMembers.partner.pointsBlock
 
-    } catch (error) {
-        console.log(error.message)
-        res.status(400).json(error.message)
-    }  
-});
+        const pointsBlock = userType === 'lead' ? leadPointsBlockArray : partnerPointsBlockArray
+        
+        console.log('PB: ' + pointsBlock)
 
-pointsRouter.put('/updateTeam', checkNotAuthenticated, async (req, res) => {
-    const sessionUser = req.session.passport.user;
-    const user = sessionUser?.email;
-    const lead = req.query.teamLeadEmail;
-
-    console.log(user, lead)
-    
-    try {
-        //Input validation block
-        if(!user ) {
-            throw new Error('User email required! ');
-        };
-    
-        if(!lead) {
-            throw new Error('Team lead email required! ');
-        };
-
-        //Check if user already belongs to another team
-        const userCheck = await Team.findOne({ 
-            $or: [
-                {'members.lead': user},
-                {'members.partner': user}
-            ],
-        });
-        console.log('userCheck: ' + userCheck)
-        if(userCheck) {
-            throw new Error("User already belongs to another team");
+        async function calcPointBlock() {
+            pointsBlock.push(dailyPointsTotal);
+            if(pointsBlock.length > 7) {
+                pointsBlock.shift()
+            }
         } 
+        await calcPointBlock()
+        console.log('PB2: ' + pointsBlock)
 
-        //Check if user already belongs to another team
-        const leader = await Team.find({ 
-            'members.lead': lead
-        });
-        console.log('leader: ' + leader)
-        if(leader.length > 1) {
-            throw new Error("Partner already belongs to another team");
-        } 
+        //Points block sum of lead and partner
+        const pointsBlockTotal = pointsBlock.reduce((accumulator, currentValue) => accumulator + currentValue)
 
-        //Get partners teamID
-        const teamID = leader[0]._id
-        console.log('teamID: ' + teamID) 
-        if(!teamID) {
-            throw new Error("Cannot fetch teamID");
-        } 
-
-        //Database update block
-        const team = await Team.findByIdAndUpdate(
-            teamID,
-            { $set: { 'members.partner': user } },
+        const updatePointsBlock = await Points.findByIdAndUpdate(
+            teamPointsCheck._id,
+            { $set: { 
+                [`teamMembers.${userType}.pointsBlock`]: pointsBlock,
+                [`teamMembers.${userType}.pointsBlockTotal`]: pointsBlockTotal,
+            }},
             { new: true }
         );
-        console.log('team: ' + team) 
+        console.log('UPB: ' + updatePointsBlock)
 
-        res.status(200).json({team});
+         //Team point total lead pointsBlock + partner pointsBlock
+        teamPointsCheck = await Points.findOne({ 
+            teamName: {'$regex': teamName, "$options": "i" },
+        });
+        const partnerPointsBlockTotal = teamPointsCheck.teamMembers.partner.pointsBlockTotal
+        const leadPointsBlockTotal = teamPointsCheck.teamMembers.lead.pointsBlockTotal
+
+        console.log(leadPointsBlockTotal, partnerPointsBlockTotal)
+        const teamPointsTotal = leadPointsBlockTotal + partnerPointsBlockTotal
+         
+        const teamPointsUpdate = await Points.findByIdAndUpdate(
+            teamPointsCheck._id,
+            { $set: { teamPointsTotal: teamPointsTotal }},
+            { new: true }
+        );
+        console.log('TPU: ' + teamPointsUpdate)
+
+        const sortedTeams = await sortTeams();
+        const teamRanks = await updateTeamRanks(sortedTeams);
+
+        console.log(sortedTeams, teamRanks)
+        res.status(200).json(teamPointsUpdate);
 
     } catch (error) {
         console.log(error.message)

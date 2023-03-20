@@ -4,17 +4,18 @@ const pointsSchema = new mongoose.Schema({
     teamName: String,
     teamRank: Number,
     teamPointsTotal: Number,
-    teamPointsBlock: Array,
     teamMembers: {
         lead: {
             email: String,
-            leadPointsBlock: Array,
-            dailyPoints: {}
+            pointsBlockTotal: Number,
+            pointsBlock: Array,
+            dailyPoints: Object,
         },
         partner: {
             email: String,
-            partnerPointsBlock: Array,
-            dailyPoints: {}
+            pointsBlockTotal: Number,
+            pointsBlock: Array,
+            dailyPoints: Object,
         },
     }
 });
