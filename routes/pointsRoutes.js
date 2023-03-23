@@ -1,8 +1,8 @@
 const express = require('express');
-const passport = require('passport');
-const { checkAuthenticated, checkNotAuthenticated } = require('../utilities/utility')
+//const passport = require('passport');
+const { checkNotAuthenticated } = require('../utilities/utility')
 const Team = require('../config/teams')
-const User = require('../config/users')
+//const User = require('../config/users')
 const Points = require('../config/points')
 const pointsRouter = express.Router();
 const { updateTeamRanks, sortTeams } = require('../utilities/helper')
@@ -33,10 +33,12 @@ pointsRouter.get('/', checkNotAuthenticated, async (req, res) => {
 
 pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) => {
     const user = req.session.passport.user;
-    const userEmail = user?.email
-    const userID = user?._id
+    //const userEmail = user?.email
+    //const userID = user?._id
     const userType = user?.userType;
     const teamName = req.session.team.name;
+    const leadEmail = req.session.team.members.lead;
+    const partnerEmail = req.session.team.members.partner;
     const category = req.body.category;
     const difficulty = req.body.difficulty;
     const dailyPointsTotal = req.body.dailyPointsTotal;
@@ -45,13 +47,12 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
     
     try {
         //Input validation block
-
-        if(!userEmail || !userType || !userID) {
+        if(!leadEmail || !userType || !teamName) {
             throw new Error('User cookie not sent in header! ');
         };
 
-        if(!teamName ) {
-            throw new Error('Team name required! ');
+        if(!partnerEmail) {
+            throw new Error('Partner registration required to save points! ');
         };
     
         if(!category) {
@@ -72,38 +73,25 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
 
 
 
-        //TODO: Check for team point document if not found create entry
+        //Check for team point document if not found create entry
         let teamPointsCheck = await Points.findOne({ 
             teamName: {'$regex': teamName, "$options": "i" },
         });
         //console.log(teamPointsCheck) 
         if(!teamPointsCheck) {
-            let leadUserEmail;
-            let partnerUserEmail;
-            if(userType === 'lead') {
-                leadUserEmail = userEmail
-            } else {
-                leadUserEmail = null
-            }
-            if(userType === 'partner') {
-                partnerUserEmail = userEmail
-            } else {
-                partnerUserEmail = null
-            }
-            // Create new record.
             await Points.create({
                 teamName: teamName,
                 teamRank: null,
                 teamPointsTotal: null,
                 teamMembers: {
                     lead: {
-                        email: leadUserEmail,
+                        email: leadEmail,
                         pointsBlockTotal: 0,
                         pointsBlock: [],
                         dailyPoints: {}
                     },
                     partner: {
-                        email: partnerUserEmail,
+                        email: partnerEmail,
                         pointsBlockTotal: 0,
                         pointsBlock: [],
                         dailyPoints: {}
@@ -194,7 +182,7 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
         const teamRanks = await updateTeamRanks(sortedTeams);
 
         console.log(sortedTeams, teamRanks)
-        res.status(200).json(teamPointsUpdate);
+        res.status(200).json({message: 'Points successfully saved'});
 
     } catch (error) {
         console.log(error.message)
@@ -202,25 +190,14 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
     }  
 });
 
-pointsRouter.get('/getTeam', checkNotAuthenticated, async (req, res) => {
-    const user = req.session.passport.user;
-    const email = user?.email
+pointsRouter.get('/getTeamRanks', checkNotAuthenticated, async (req, res) => {
 
     try {
-        const team = await Team.findOne({ 
-            $or: [
-                {'members.lead': email},
-                {'members.partner': email}
-            ]
-        });
+        
+        const teamRanks = await Points.find({}).select('_id teamName teamRank teamPointsTotal')
+        console.log(teamRanks)
 
-        if (team === null) {
-            throw new Error("Team Info Not Found")
-        };
-
-        console.log(team)
-
-        res.status(200).json(team);
+        res.status(200).json(teamRanks);
         
     } catch (error) {
         console.log(error.message)

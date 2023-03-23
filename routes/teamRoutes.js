@@ -25,12 +25,13 @@ teamRouter.get('/', checkNotAuthenticated, async (req, res) => {
             console.log(error.message)
             res.status(404).json(error.message)
         } 
+        return
     };
 
     if(searchTeamName) {
         try {
             const team = await Team.findOne({ 
-                name: {'$regex': searchTeamName, "$options": "i" },
+                name: {'$regex': `^${searchTeamName}$`, "$options": "i" }
             });
 
             if (team === null) {
