@@ -2,7 +2,7 @@ const express = require('express');
 //const passport = require('passport');
 const { checkNotAuthenticated } = require('../utilities/utility')
 const Team = require('../config/teams')
-//const User = require('../config/users')
+const User = require('../config/users')
 const Points = require('../config/points')
 const pointsRouter = express.Router();
 const { updateTeamRanks, sortTeams } = require('../utilities/helper')
@@ -34,7 +34,7 @@ pointsRouter.get('/', checkNotAuthenticated, async (req, res) => {
 pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) => {
     const user = req.session.passport.user;
     //const userEmail = user?.email
-    //const userID = user?._id
+    const userID = user?._id
     const userType = user?.userType;
     const teamName = req.session.team.name;
     const leadEmail = req.session.team.members.lead;
@@ -47,7 +47,7 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
     
     try {
         //Input validation block
-        if(!leadEmail || !userType || !teamName) {
+        if(!leadEmail || !userType || !teamName  || !userID) {
             throw new Error('User cookie not sent in header! ');
         };
 
@@ -161,6 +161,16 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
         );
         console.log('UPB: ' + updatePointsBlock)
 
+        //Update last game in user table and session
+        const updateLastGame = await User.findByIdAndUpdate(
+            userID,
+            { $set: { 
+                lastGame: currentDate,
+            }},
+            { new: true }
+        );
+        
+
          //Team point total lead pointsBlock + partner pointsBlock
         teamPointsCheck = await Points.findOne({ 
             teamName: {'$regex': teamName, "$options": "i" },
@@ -182,6 +192,11 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
         const teamRanks = await updateTeamRanks(sortedTeams);
 
         console.log(sortedTeams, teamRanks)
+        
+        //Update session user
+        req.session.passport.user = await User.findOne({
+            _id: userID
+        })
         res.status(200).json({message: 'Points successfully saved'});
 
     } catch (error) {

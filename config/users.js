@@ -18,6 +18,9 @@ const userSchema = new mongoose.Schema({
         type: String,
         lowercase: true
     },
+    lastGame: {
+        type: Date,
+    },
     createdAt: {
         type: Date,
         immutable: true,
