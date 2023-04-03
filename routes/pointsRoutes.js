@@ -192,7 +192,7 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
         const teamRanks = await updateTeamRanks(sortedTeams);
 
         console.log(sortedTeams, teamRanks)
-        
+
         //Update session user
         req.session.passport.user = await User.findOne({
             _id: userID
@@ -210,9 +210,8 @@ pointsRouter.get('/getTeamRanks', checkNotAuthenticated, async (req, res) => {
     try {
         
         const teamRanks = await Points.find({}).select('_id teamName teamRank teamPointsTotal')
-        console.log(teamRanks)
-
-        res.status(200).json(teamRanks);
+        const sortedTeams = teamRanks.sort(function(a, b) {return b.teamPointsTotal - a.teamPointsTotal})
+        res.status(200).json(sortedTeams);
         
     } catch (error) {
         console.log(error.message)
