@@ -84,7 +84,7 @@ if(process.env.NODE_ENV === 'development') {
     app.use(morgan('tiny'))
 }
 
-const db = mongoose.connect(process.env.MONGODB_URI)
+/* const db =  */mongoose.connect(process.env.MONGODB_URI)
 const store = new MongoDBStore({
     uri: process.env.MONGODB_URI,
     collection: 'sessions'

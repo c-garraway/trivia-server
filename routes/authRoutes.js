@@ -103,10 +103,10 @@ authRouter.post('/register', checkAuthenticated, async (req, res) => {
 });
 
 // GOOGLE AUTH
-authRouter.get('/', passport.authenticate('google', { 
+/* authRouter.get('/', passport.authenticate('google', { 
     scope: ['profile', 'email'],
     prompt: 'select_account' })
-);
+); */
 //TODO: point to MongoDB
 /* authRouter.get('/callback', 
     passport.authenticate('google', { 

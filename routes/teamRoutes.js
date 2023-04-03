@@ -1,6 +1,6 @@
 const express = require('express');
-const passport = require('passport');
-const { checkAuthenticated, checkNotAuthenticated } = require('../utilities/utility')
+//const passport = require('passport');
+const { /* checkAuthenticated, */ checkNotAuthenticated } = require('../utilities/utility')
 const Team = require('../config/teams')
 const User = require('../config/users')
 const teamRouter = express.Router();
