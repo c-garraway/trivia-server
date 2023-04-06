@@ -1,7 +1,5 @@
 const express = require('express');
-//const passport = require('passport');
 const { checkNotAuthenticated } = require('../utilities/utility')
-//const Team = require('../config/teams')
 const User = require('../config/users')
 const Points = require('../config/points')
 const pointsRouter = express.Router();
@@ -33,7 +31,6 @@ pointsRouter.get('/', checkNotAuthenticated, async (req, res) => {
 
 pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) => {
     const user = req.session.passport.user;
-    //const userEmail = user?.email
     const userID = user?._id
     const userType = user?.userType;
     const teamName = req.session.team.name;
@@ -77,7 +74,7 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
         let teamPointsCheck = await Points.findOne({ 
             teamName: {'$regex': teamName, "$options": "i" },
         });
-        //console.log(teamPointsCheck) 
+
         if(!teamPointsCheck) {
             await Points.create({
                 teamName: teamName,

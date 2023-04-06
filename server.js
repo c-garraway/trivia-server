@@ -3,7 +3,7 @@ const app = express();
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+//const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const LocalStrategy = require('passport-local').Strategy;
 const cors = require('cors');
 const helmet = require('helmet');
@@ -43,7 +43,7 @@ const authenticateLocalUser = async (email, password, done) => {
     } 
 };
 
-passport.use(new GoogleStrategy({
+/* passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.NODE_ENV === 'development' ? process.env.GOOGLE_CALLBACK_URL_DEV : process.env.GOOGLE_CALLBACK_URL
@@ -51,7 +51,7 @@ passport.use(new GoogleStrategy({
     function(request, accessToken, refreshToken, profile, done) {
         return done(null, profile);
     }
-));
+)); */
 
 passport.use(
     new LocalStrategy(
@@ -84,7 +84,7 @@ if(process.env.NODE_ENV === 'development') {
     app.use(morgan('tiny'))
 }
 
-/* const db =  */mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI)
 const store = new MongoDBStore({
     uri: process.env.MONGODB_URI,
     collection: 'sessions'
@@ -122,9 +122,9 @@ app.use('/team', teamRouter);
 const pointsRouter = require('./routes/pointsRoutes');
 app.use('/points', pointsRouter);
 
-app.get('/', (req, res) =>{
-    res.send('bem backend root')    
-})
+/* app.get('/', (req, res) =>{
+    res.send('trivia backend root')    
+}) */
 
 app.listen(PORT, ()=>{
     console.log(`Server running on port ${PORT}`)

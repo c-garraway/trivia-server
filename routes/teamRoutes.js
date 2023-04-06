@@ -1,6 +1,5 @@
 const express = require('express');
-//const passport = require('passport');
-const { /* checkAuthenticated, */ checkNotAuthenticated } = require('../utilities/utility')
+const { checkNotAuthenticated } = require('../utilities/utility')
 const Team = require('../config/teams')
 const User = require('../config/users')
 const teamRouter = express.Router();
@@ -161,7 +160,7 @@ teamRouter.put('/updateTeam', checkNotAuthenticated, async (req, res) => {
         );
         console.log('team: ' + team) 
 
-        await User.findOneAndUpdate( //TODO: Rethink userType change!!!!
+        await User.findOneAndUpdate( 
             {email: user}, {userType: 'partner'}
         ); 
         //Update session user

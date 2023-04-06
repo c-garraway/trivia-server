@@ -22,8 +22,6 @@ async function updateTeamRanks(sortedTeams) {
     for (let index = 0; index < sortedTeams.length; index++) {
         const team = sortedTeams[index];
         const rank = index + 1;
-        //console.log(rank);
-        //console.log(team);
         const updatedTeam = await Points.findByIdAndUpdate(
             team._id,
             { $set: { teamRank: rank } },
