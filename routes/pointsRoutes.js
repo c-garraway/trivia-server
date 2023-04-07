@@ -18,7 +18,7 @@ pointsRouter.get('/', checkNotAuthenticated, async (req, res) => {
                 throw new Error("Team Points Info Not Found")
             };
 
-            console.log(teamPoints)
+            //console.log(teamPoints)
 
             res.status(200).json(teamPoints);
     
@@ -40,7 +40,7 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
     const difficulty = req.body.difficulty;
     const dailyPointsTotal = req.body.dailyPointsTotal;
     const dailyPointsBlock = req.body.dailyPointsBlock;
-    const currentDate = new Date().toISOString().slice(0, 10);
+    const currentDate = req.body.currentDate //NOW PROVIDED BY CLIENT- based on local date
     
     try {
         //Input validation block
@@ -106,13 +106,13 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
                 {[`teamMembers.${userType}.dailyPoints.${currentDate}`]: {$exists: true}}
             ]
         })
-        console.log(dailyPointsCheck)
+        //console.log(dailyPointsCheck)
         if(dailyPointsCheck) {
             throw new Error("Daily entry already exists"); //future remove
         }
 
         // Database update block
-        console.log(category, difficulty, dailyPointsTotal, dailyPointsBlock)
+        //console.log(category, difficulty, dailyPointsTotal, dailyPointsBlock)
 
         const teamPoints = await Points.findByIdAndUpdate(
             teamPointsCheck._id,
@@ -128,13 +128,13 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
 
         //Perform calculations
         //Points block update with daily total
-        console.log('TPC: ' + teamPointsCheck)
+        //console.log('TPC: ' + teamPointsCheck)
         const leadPointsBlockArray =  teamPointsCheck.teamMembers.lead.pointsBlock
         const partnerPointsBlockArray = teamPointsCheck.teamMembers.partner.pointsBlock
 
         const pointsBlock = userType === 'lead' ? leadPointsBlockArray : partnerPointsBlockArray
         
-        console.log('PB: ' + pointsBlock)
+        //console.log('PB: ' + pointsBlock)
 
         async function calcPointBlock() {
             pointsBlock.push(dailyPointsTotal);
@@ -143,7 +143,7 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
             }
         } 
         await calcPointBlock()
-        console.log('PB2: ' + pointsBlock)
+        //console.log('PB2: ' + pointsBlock)
 
         //Points block sum of lead and partner
         const pointsBlockTotal = pointsBlock.reduce((accumulator, currentValue) => accumulator + currentValue)
@@ -156,7 +156,7 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
             }},
             { new: true }
         );
-        console.log('UPB: ' + updatePointsBlock)
+        //console.log('UPB: ' + updatePointsBlock)
 
         //Update last game in user table and session
         const updateLastGame = await User.findByIdAndUpdate(
@@ -175,7 +175,7 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
         const partnerPointsBlockTotal = teamPointsCheck.teamMembers.partner.pointsBlockTotal
         const leadPointsBlockTotal = teamPointsCheck.teamMembers.lead.pointsBlockTotal
 
-        console.log(leadPointsBlockTotal, partnerPointsBlockTotal)
+        //console.log(leadPointsBlockTotal, partnerPointsBlockTotal)
         const teamPointsTotal = leadPointsBlockTotal + partnerPointsBlockTotal
          
         const teamPointsUpdate = await Points.findByIdAndUpdate(
@@ -183,12 +183,12 @@ pointsRouter.put('/updateDailyPoints', checkNotAuthenticated, async (req, res) =
             { $set: { teamPointsTotal: teamPointsTotal }},
             { new: true }
         );
-        console.log('TPU: ' + teamPointsUpdate)
+        //console.log('TPU: ' + teamPointsUpdate)
 
         const sortedTeams = await sortTeams();
         const teamRanks = await updateTeamRanks(sortedTeams);
 
-        console.log(sortedTeams, teamRanks)
+        //console.log(sortedTeams, teamRanks)
 
         //Update session user
         req.session.passport.user = await User.findOne({

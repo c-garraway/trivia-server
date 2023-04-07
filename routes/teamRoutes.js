@@ -37,7 +37,7 @@ teamRouter.get('/', checkNotAuthenticated, async (req, res) => {
                 throw new Error("Team Info Not Found")
             };
 
-            console.log(team)
+            //console.log(team)
 
             res.status(200).json({name: team.name});
     
@@ -70,7 +70,7 @@ teamRouter.post('/addTeam', checkNotAuthenticated, async (req, res) => {
                 {'members.partner': lead}
             ],
         });
-        console.log(userCheck)
+        //console.log(userCheck)
         if(userCheck) {
             throw new Error("User already belongs to another team");
         } 
@@ -79,7 +79,7 @@ teamRouter.post('/addTeam', checkNotAuthenticated, async (req, res) => {
         const teamCheck = await Team.findOne({ 
             name: {'$regex': name, "$options": "i" },
         });
-        console.log(teamCheck) 
+        //console.log(teamCheck) 
         if(teamCheck) {
             throw new Error("Team already exists");
         } 
@@ -112,7 +112,7 @@ teamRouter.put('/updateTeam', checkNotAuthenticated, async (req, res) => {
     const user = sessionUser?.email;
     const lead = req.query.teamLeadEmail;
 
-    console.log(user, lead)
+    //console.log(user, lead)
     
     try {
         //Input validation block
@@ -131,7 +131,7 @@ teamRouter.put('/updateTeam', checkNotAuthenticated, async (req, res) => {
                 {'members.partner': user}
             ],
         });
-        console.log('userCheck: ' + userCheck)
+        //console.log('userCheck: ' + userCheck)
         if(userCheck) {
             throw new Error("User already belongs to another team");
         } 
@@ -140,14 +140,14 @@ teamRouter.put('/updateTeam', checkNotAuthenticated, async (req, res) => {
         const leader = await Team.find({ 
             'members.lead': lead
         });
-        console.log('leader: ' + leader)
+        //console.log('leader: ' + leader)
         if(leader.length > 1) {
             throw new Error("Partner already belongs to another team");
         } 
 
         //Get partners teamID
         const teamID = leader[0]._id
-        console.log('teamID: ' + teamID) 
+        //console.log('teamID: ' + teamID) 
         if(!teamID) {
             throw new Error("Cannot fetch teamID");
         } 
@@ -158,7 +158,7 @@ teamRouter.put('/updateTeam', checkNotAuthenticated, async (req, res) => {
             { $set: { 'members.partner': user } },
             { new: true }
         );
-        console.log('team: ' + team) 
+        //console.log('team: ' + team) 
 
         await User.findOneAndUpdate( 
             {email: user}, {userType: 'partner'}
@@ -192,7 +192,7 @@ teamRouter.get('/getTeam', checkNotAuthenticated, async (req, res) => {
             throw new Error("Team Info Not Found")
         };
 
-        console.log(team)
+        //console.log(team)
         req.session.team = team
         res.status(200).json(team);
         
